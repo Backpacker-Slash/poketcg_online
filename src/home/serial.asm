@@ -318,7 +318,6 @@ SerialSendByte::
     ld a, 1
     ld [wSerialSendBufToggle], a
 
-	call wait_byte_exchange
 	pop af
 	ret
 	
@@ -376,8 +375,6 @@ SerialSend8Bytes::
 	ld bc, 8
 
 	call SerialSendBytes
-
-	call wait_byte_exchange
 
 	; jp c, DuelTransmissionError
 	pop bc
@@ -566,26 +563,19 @@ SerialExchangeBytes::
 ;     jr nz, .send_loop
 
 	call SerialSendBytes
-
-; .confirm_received	
-; 	ld a, [wSerialFlags]
-; 	cp PACKET_RECEIVED_BY_OPP
-; 	jr z, .done
-; 	call DoFrame
-; 	jr .confirm_received
-
-; .done	
-; 	xor a ;ld a, PACKET_IDLE
-; 	ld [wSerialFlags], a
 	pop hl
-    ; pop de
-    ; pop bc
+	;fallthrough to SerialRecvBytes
 
-    ; --- PHASE 2: RECEIVE PACKET SMOOTHLY ---
-    push de
-    pop hl              ; hl = destination buffer (de)
-    ; ld b, $00           ; bc = length (c) 
-    ;fallthrough ;jp SerialRecvBytes  ; jump directly into smooth receive loop
+; ==============================================================================
+
+;
+; Receives
+
+
+
+
+
+
 
 
 ; ==============================================================================
@@ -622,13 +612,13 @@ SerialRecvBytes::
     ld [wSerialRecvCounter], a
 
 	ld a, PACKET_CONSUMED
-	ld [wSerialRecvState], a	
+	ld [wSerialRecvState], a
 	pop de
 	pop bc
 	ret
 
 .wait_DoFrame
-    call DoFrame
+	call DoFrame
 	jr .wait
 
 
@@ -853,8 +843,6 @@ ExchangeRNG::
 .exchange
 	ld bc, 3 ; wRNG1, wRNG2, and wRNGCounter
 	call SerialExchangeBytes
-	; jp c, DuelTransmissionError
-	call wait_byte_exchange
 
 	ret
 
@@ -875,18 +863,8 @@ SetOppAction_SerialSendDuelData::
 	ld hl, hOppActionTableIndex
 	ld bc, 10
 	call SerialSendBytes
-	call wait_byte_exchange
 
-
-
-; .wait	
-; 	ld a, [wSerialFlags]
-; 	cp PACKET_RECEIVED_BY_OPP
-; 	jr nz, .wait_DoFrame
-; 	xor a
-; 	ld [wSerialFlags], a
-	call ExchangeRNG
-	; call wait_byte_exchange	
+	call ExchangeRNG	
 .not_link
 	pop bc
 	pop hl
@@ -904,9 +882,7 @@ SerialRecvDuelData::
 	ld hl, hOppActionTableIndex
 	ld bc, 10
 	call SerialRecvBytes
-	call wait_byte_exchange	
 	call ExchangeRNG
-	; call wait_byte_exchange		
 	pop bc
 	pop hl
 	ret
